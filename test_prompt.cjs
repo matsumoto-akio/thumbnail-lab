@@ -1,0 +1,17 @@
+const fs=require('node:fs'), vm=require('node:vm'), assert=require('node:assert/strict');
+const source=fs.readFileSync(__dirname+'/public/app.js','utf8');
+const nodes={};
+const context={document:{getElementById:id=>nodes[id]??=( {} )},crypto:{},run:()=>{},console};
+const trimmed=source.slice(0,source.lastIndexOf("run(async()=>{const response=await fetch('/api/state')"));
+vm.createContext(context); vm.runInContext(trimmed,context);
+const channel={name:'テスト',refs:[{name:'採用見本.png',favorite:true},{name:'非選択.png',favorite:false}],rules:'白文字と黒い縁',batches:[{topic:'旧作',adopted:2,remember:true,reason:'顔を大きく'},{topic:'別案',adopted:1,remember:false,reason:'反映しない理由'},{topic:'未採用',adopted:null,remember:true,reason:'未採用の理由'}]};
+const text=context.buildPrompt(channel,{topic:'新作',headline:'新しい題材',notes:''});
+assert(text.includes('顔を大きく'));
+assert(text.includes('白文字と黒い縁'));
+assert(text.includes('採用見本.png'));
+assert(!text.includes('非選択.png'));
+assert(!text.includes('反映しない理由'));
+assert(!text.includes('未採用の理由'));
+assert.equal((text.match(/^案[1-5]：/gm)||[]).length,5);
+assert(text.includes('各案を独立した画像'));
+console.log('PASS: preference inclusion/exclusion, reference selection, five variants');

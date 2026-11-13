@@ -196,3 +196,16 @@ $('adopt').onclick=()=>run(async()=>{
 });
 $('backup').onclick=()=>download('thumbnail-lab-backup.json',JSON.stringify(state,null,2),'application/json');
 run(async()=>{const response=await fetch('/api/state');if(!response.ok)throw new Error('この端末に接続できません。');const result=await response.json();state=result.data;version=result.version;$('saveStatus').textContent='この端末に接続済み';render();});
+
+// Receive agent-generated batches while preserving unfinished user input.
+setInterval(()=>run(async()=>{
+  if(saving || document.hidden || ['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName)) return;
+  if(selected !== (batch()?.adopted ?? null) || $('reason').value !== (batch()?.reason || '') || $('rules').value !== (current()?.rules || '') || $('remember').checked !== (batch()?.remember ?? true)) return;
+  const response=await fetch('/api/state');
+  if(!response.ok) return;
+  const result=await response.json();
+  if(result.version>version && !saving && !['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName) && selected === (batch()?.adopted ?? null) && $('reason').value === (batch()?.reason || '') && $('rules').value === (current()?.rules || '')) {
+    state=result.data;version=result.version;batchId='';render();
+    $('saveStatus').textContent='新しい制作結果を読み込みました';
+  }
+}),3000);
